@@ -5,4 +5,7 @@ NPM_CONFIG_PRODUCTION = "false"
 cmds = ["npm ci --prefix frontend --include=dev"]
 
 [phases.build]
-cmds = ["npm run build --prefix frontend"]
+cmds = [
+  "npm run build --prefix frontend",
+  "mkdir -p dist && cp -r frontend/dist/. dist/",
+]
