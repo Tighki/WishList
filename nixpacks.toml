@@ -1,0 +1,8 @@
+[variables]
+NPM_CONFIG_PRODUCTION = "false"
+
+[phases.install]
+cmds = ["npm ci --prefix frontend --include=dev"]
+
+[phases.build]
+cmds = ["npm run build --prefix frontend"]
