@@ -1,12 +1,6 @@
 node_modules
 frontend/node_modules
-backend/node_modules
 frontend/dist
-backend/dist
-backend/data
 .git
 .cursor
-.agency-agents-tmp
 *.log
-.env
-.env.*

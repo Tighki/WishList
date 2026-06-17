@@ -1,14 +1,8 @@
-# Dependencies
-node_modules/
-.agency-agents-tmp/
-
-# Build
-frontend/dist/
-backend/dist/
-
-# Data
-backend/data/
-data/
+node_modules
+frontend/node_modules
+frontend/dist
+backend/
+.agency-agents-tmp
 
 # Env
 .env
@@ -21,4 +15,3 @@ data/
 # OS
 .DS_Store
 Thumbs.db
-ozon-test.html

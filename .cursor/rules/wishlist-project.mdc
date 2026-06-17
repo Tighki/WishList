@@ -9,34 +9,28 @@ alwaysApply: true
 Self-hosted вишлист для ремонта квартиры. Пользователь добавляет ссылки на Ozon — приложение подтягивает фото, описание и цену. В профиле показывается сумма всех товаров.
 
 ## Стек
-- **Frontend**: React 19 + TypeScript + Vite (`frontend/`)
-- **Backend**: Express + JSON store (`backend/`)
-- **Парсер Ozon**: composer-api.bx + fallback JSON-LD/OG
-- **Стили**: Tailwind CSS v4, lucide-react
-
-## Дизайн
-- Тёплая, современная эстетика (ремонт / интерьер)
-- Русский язык в UI
-- Агенты: `@ui-designer`, `@ux-architect`, `@brand-guardian`, `@whimsy-injector`
-- Перед созданием UI — использовать MCP 21st для компонентов
+- **Frontend**: React 19 + Vite → репо [Tighki/WishList](https://github.com/Tighki/WishList), nginx, порт **80**
+- **Backend**: Express + JSON store → репо [Tighki/WishList_Back](https://github.com/Tighki/WishList_Back), порт **3001**
+- **Парсер Ozon**: composer-api + Playwright fallback
+- **Стили**: Tailwind CSS v4
 
 ## Локальная разработка
 
 ```bash
-cd backend && npm run dev   # :3001
-cd frontend && npm run dev  # :5173
+cd backend && npm run dev   # :3001  (или клон WishList_Back)
+cd frontend && npm run dev  # :5173, proxy /api → :3001
 ```
 
 ## Деплой (Dokploy + DuckDNS)
 
-```bash
-docker compose up -d --build
-```
+**Backend** (`WishList_Back`):
+- Compose, port **3001**
+- `CORS_ORIGIN=https://ваш-frontend.duckdns.org`
+- Volume `wishlist-data`
 
-- Один контейнер: frontend + API на порту **3000**
-- Данные: volume `wishlist-data` → `/app/data`
-- В Dokploy: Compose → Domains → `ваш-subdomain.duckdns.org`, port **3000**, HTTPS **On**
-- DuckDNS: A-запись subdomain → IP сервера
+**Frontend** (`WishList`):
+- Compose, port **80**
+- Build arg: `VITE_API_URL=https://ваш-api.duckdns.org/api`
 
 ## Структура
   components/   # UI-компоненты
