@@ -1,9 +1,0 @@
-services:
-  wishlist-web:
-    build:
-      context: .
-      args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:3001/api}
-    restart: unless-stopped
-    expose:
-      - "80"
