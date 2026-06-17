@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+.agency-agents-tmp/
+
+# Build
+frontend/dist/
+backend/dist/
+
+# Data
+backend/data/
+data/
+
+# Env
+.env
+.env.*
+
+# IDE
+.vscode/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+ozon-test.html

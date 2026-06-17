@@ -1,0 +1,15 @@
+services:
+  wishlist:
+    build: .
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_PATH: /app/data/wishlist.json
+    volumes:
+      - wishlist-data:/app/data
+
+volumes:
+  wishlist-data:

@@ -1,0 +1,58 @@
+---
+description: WishList — вишлист для ремонта квартиры с товарами Ozon
+alwaysApply: true
+---
+
+# WishList Project
+
+## Цель
+Self-hosted вишлист для ремонта квартиры. Пользователь добавляет ссылки на Ozon — приложение подтягивает фото, описание и цену. В профиле показывается сумма всех товаров.
+
+## Стек
+- **Frontend**: React 19 + TypeScript + Vite (`frontend/`)
+- **Backend**: Express + JSON store (`backend/`)
+- **Парсер Ozon**: composer-api.bx + fallback JSON-LD/OG
+- **Стили**: Tailwind CSS v4, lucide-react
+
+## Дизайн
+- Тёплая, современная эстетика (ремонт / интерьер)
+- Русский язык в UI
+- Агенты: `@ui-designer`, `@ux-architect`, `@brand-guardian`, `@whimsy-injector`
+- Перед созданием UI — использовать MCP 21st для компонентов
+
+## Локальная разработка
+
+```bash
+cd backend && npm run dev   # :3001
+cd frontend && npm run dev  # :5173
+```
+
+## Деплой (Dokploy + DuckDNS)
+
+```bash
+docker compose up -d --build
+```
+
+- Один контейнер: frontend + API на порту **3000**
+- Данные: volume `wishlist-data` → `/app/data`
+- В Dokploy: Compose → Domains → `ваш-subdomain.duckdns.org`, port **3000**, HTTPS **On**
+- DuckDNS: A-запись subdomain → IP сервера
+
+## Структура
+  components/   # UI-компоненты
+  lib/          # утилиты (cn, formatPrice)
+  types/        # TypeScript типы
+  App.tsx       # главная страница
+```
+
+## Агенты Agency (установлены в .cursor/rules/)
+- `frontend-developer` — React/TS реализация
+- `ui-designer` — визуал и компоненты
+- `ux-architect` — UX и структура
+- `brand-guardian` — бренд и консистентность
+- `whimsy-injector` — микро-анимации и delight
+- `rapid-prototyper` — быстрый MVP
+- `backend-architect` — API и архитектура
+- `product-manager` — приоритеты фич
+
+Активировать: `@ui-designer помоги с карточкой товара`
