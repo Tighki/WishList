@@ -1,0 +1,10 @@
+{
+  "name": "wishlist",
+  "private": true,
+  "scripts": {
+    "build": "npm ci --prefix frontend && npm run build --prefix frontend"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
