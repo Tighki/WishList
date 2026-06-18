@@ -3,7 +3,7 @@ import { extname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createServer } from 'node:http'
 
-const port = Number(process.env.PORT ?? 3000)
+const port = Number(process.env.PORT ?? 80)
 const distDir = join(fileURLToPath(new URL('.', import.meta.url)), 'dist')
 
 const mimeTypes = {
