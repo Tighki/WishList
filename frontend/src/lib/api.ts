@@ -1,16 +1,23 @@
-import type { WishlistItem } from '@/types/wishlist'
+import type { CreateItemPayload, Wishlist, WishlistItem } from '@/types/wishlist'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '/api'
 
 interface ApiItem {
   id: string
-  url: string
   title: string
   description: string
   price: number
   quantity: number
   imageUrl: string
+  url: string
   purchased: boolean
+  createdAt: string
+}
+
+interface ApiWishlist {
+  id: string
+  slug: string
+  title: string
   createdAt: string
 }
 
@@ -34,13 +41,22 @@ class ApiError extends Error {
 function mapItem(item: ApiItem): WishlistItem {
   return {
     id: item.id,
-    url: item.url,
     title: item.title,
     description: item.description,
     price: item.price,
     quantity: item.quantity > 0 ? item.quantity : 1,
     imageUrl: item.imageUrl,
+    url: item.url,
     purchased: item.purchased,
+  }
+}
+
+function mapWishlist(wishlist: ApiWishlist): Wishlist {
+  return {
+    id: wishlist.id,
+    slug: wishlist.slug,
+    title: wishlist.title,
+    createdAt: wishlist.createdAt,
   }
 }
 
@@ -74,30 +90,63 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
+function withEditToken(editToken?: string): HeadersInit | undefined {
+  if (!editToken) return undefined
+  return { 'X-Edit-Token': editToken }
+}
+
 export const wishlistApi = {
-  async getItems(): Promise<WishlistItem[]> {
-    const data = await request<{ items: ApiItem[] }>('/items')
-    return data.items.map(mapItem)
-  },
-
-  async addItem(url: string, quantity = 1): Promise<WishlistItem> {
-    const data = await request<{ item: ApiItem }>('/items', {
+  async createWishlist(title?: string): Promise<{ wishlist: Wishlist; editToken: string }> {
+    const data = await request<{ wishlist: ApiWishlist; editToken: string }>('/wishlists', {
       method: 'POST',
-      body: JSON.stringify({ url, quantity }),
+      body: JSON.stringify({ title }),
+    })
+    return {
+      wishlist: mapWishlist(data.wishlist),
+      editToken: data.editToken,
+    }
+  },
+
+  async getWishlist(slug: string): Promise<{ wishlist: Wishlist; items: WishlistItem[] }> {
+    const data = await request<{ wishlist: ApiWishlist; items: ApiItem[] }>(`/wishlists/${slug}`)
+    return {
+      wishlist: mapWishlist(data.wishlist),
+      items: data.items.map(mapItem),
+    }
+  },
+
+  async addItem(
+    slug: string,
+    payload: CreateItemPayload,
+    editToken: string,
+  ): Promise<WishlistItem> {
+    const data = await request<{ item: ApiItem }>(`/wishlists/${slug}/items`, {
+      method: 'POST',
+      headers: withEditToken(editToken),
+      body: JSON.stringify(payload),
     })
     return mapItem(data.item)
   },
 
-  async updateQuantity(id: string, quantity: number): Promise<WishlistItem> {
-    const data = await request<{ item: ApiItem }>(`/items/${id}`, {
+  async updateItem(
+    slug: string,
+    id: string,
+    patch: { quantity?: number; purchased?: boolean },
+    editToken: string,
+  ): Promise<WishlistItem> {
+    const data = await request<{ item: ApiItem }>(`/wishlists/${slug}/items/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ quantity }),
+      headers: withEditToken(editToken),
+      body: JSON.stringify(patch),
     })
     return mapItem(data.item)
   },
 
-  async removeItem(id: string): Promise<void> {
-    await request<void>(`/items/${id}`, { method: 'DELETE' })
+  async removeItem(slug: string, id: string, editToken: string): Promise<void> {
+    await request<void>(`/wishlists/${slug}/items/${id}`, {
+      method: 'DELETE',
+      headers: withEditToken(editToken),
+    })
   },
 }
 

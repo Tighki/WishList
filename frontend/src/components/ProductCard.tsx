@@ -5,14 +5,22 @@ import type { WishlistItem } from '@/types/wishlist'
 
 interface ProductCardProps {
   item: WishlistItem
-  onRemove: (id: string) => void
-  onQuantityChange: (id: string, quantity: number) => void
+  readOnly?: boolean
+  onRemove?: (id: string) => void
+  onQuantityChange?: (id: string, quantity: number) => void
 }
 
-export function ProductCard({ item, onRemove, onQuantityChange }: ProductCardProps) {
+export function ProductCard({
+  item,
+  readOnly = false,
+  onRemove,
+  onQuantityChange,
+}: ProductCardProps) {
   const lineTotal = item.price * item.quantity
+  const hasLink = Boolean(item.url)
 
   function openProduct() {
+    if (!hasLink) return
     window.open(item.url, '_blank', 'noopener,noreferrer')
   }
 
@@ -22,37 +30,42 @@ export function ProductCard({ item, onRemove, onQuantityChange }: ProductCardPro
 
   function decrease(event: MouseEvent) {
     stopCardNavigation(event)
-    if (item.quantity <= 1) return
-    onQuantityChange(item.id, item.quantity - 1)
+    if (readOnly || item.quantity <= 1) return
+    onQuantityChange?.(item.id, item.quantity - 1)
   }
 
   function increase(event: MouseEvent) {
     stopCardNavigation(event)
-    if (item.quantity >= 999) return
-    onQuantityChange(item.id, item.quantity + 1)
+    if (readOnly || item.quantity >= 999) return
+    onQuantityChange?.(item.id, item.quantity + 1)
   }
 
   function remove(event: MouseEvent) {
     stopCardNavigation(event)
-    onRemove(item.id)
+    if (readOnly) return
+    onRemove?.(item.id)
   }
 
   return (
     <article
-      role="link"
-      tabIndex={0}
-      onClick={openProduct}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault()
-          openProduct()
-        }
-      }}
-      aria-label={`Открыть на Ozon: ${item.title}`}
+      role={hasLink ? 'link' : undefined}
+      tabIndex={hasLink ? 0 : undefined}
+      onClick={hasLink ? openProduct : undefined}
+      onKeyDown={
+        hasLink
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                openProduct()
+              }
+            }
+          : undefined
+      }
+      aria-label={hasLink ? `Открыть товар: ${item.title}` : item.title}
       className={cn(
-        'group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-stone/10 bg-white',
+        'group flex flex-col overflow-hidden rounded-2xl border border-stone/10 bg-white',
         'shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-stone/10',
-        'focus-visible:ring-2 focus-visible:ring-terracotta/40 focus-visible:outline-none',
+        hasLink && 'cursor-pointer focus-visible:ring-2 focus-visible:ring-terracotta/40 focus-visible:outline-none',
         item.purchased && 'opacity-60',
       )}
     >
@@ -86,44 +99,51 @@ export function ProductCard({ item, onRemove, onQuantityChange }: ProductCardPro
           <h3 className="line-clamp-2 text-sm font-semibold text-charcoal sm:text-base">
             {item.title}
           </h3>
-          <p className="mt-1.5 line-clamp-2 text-xs text-stone sm:text-sm">
-            {item.description}
-          </p>
+          {item.description && (
+            <p className="mt-1.5 line-clamp-2 text-xs text-stone sm:text-sm">
+              {item.description}
+            </p>
+          )}
         </div>
 
-        <div
-          className="flex items-center justify-between gap-2"
-          onClick={stopCardNavigation}
-          onKeyDown={stopCardNavigation}
-        >
-          <span className="text-xs text-stone">Количество</span>
-          <div className="flex items-center gap-1 rounded-xl border border-stone/15 bg-sand/50 p-1">
-            <button
-              type="button"
-              onClick={decrease}
-              disabled={item.quantity <= 1}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-stone transition hover:bg-white hover:text-charcoal disabled:opacity-40"
-              aria-label="Уменьшить количество"
-            >
-              <Minus className="size-3.5" />
-            </button>
-            <span className="min-w-6 text-center text-sm font-semibold text-charcoal">
-              {item.quantity}
-            </span>
-            <button
-              type="button"
-              onClick={increase}
-              disabled={item.quantity >= 999}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-stone transition hover:bg-white hover:text-charcoal disabled:opacity-40"
-              aria-label="Увеличить количество"
-            >
-              <Plus className="size-3.5" />
-            </button>
+        {!readOnly && (
+          <div
+            className="flex items-center justify-between gap-2"
+            onClick={stopCardNavigation}
+            onKeyDown={stopCardNavigation}
+          >
+            <span className="text-xs text-stone">Количество</span>
+            <div className="flex items-center gap-1 rounded-xl border border-stone/15 bg-sand/50 p-1">
+              <button
+                type="button"
+                onClick={decrease}
+                disabled={item.quantity <= 1}
+                className="inline-flex size-8 items-center justify-center rounded-lg text-stone transition hover:bg-white hover:text-charcoal disabled:opacity-40"
+                aria-label="Уменьшить количество"
+              >
+                <Minus className="size-3.5" />
+              </button>
+              <span className="min-w-6 text-center text-sm font-semibold text-charcoal">
+                {item.quantity}
+              </span>
+              <button
+                type="button"
+                onClick={increase}
+                disabled={item.quantity >= 999}
+                className="inline-flex size-8 items-center justify-center rounded-lg text-stone transition hover:bg-white hover:text-charcoal disabled:opacity-40"
+                aria-label="Увеличить количество"
+              >
+                <Plus className="size-3.5" />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         <div
-          className="flex items-center justify-between gap-2 border-t border-stone/10 pt-3"
+          className={cn(
+            'flex items-center justify-between gap-2 border-t border-stone/10 pt-3',
+            readOnly && 'mt-auto',
+          )}
           onClick={stopCardNavigation}
           onKeyDown={stopCardNavigation}
         >
@@ -137,14 +157,16 @@ export function ProductCard({ item, onRemove, onQuantityChange }: ProductCardPro
               </p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={remove}
-            className="inline-flex size-9 items-center justify-center rounded-xl text-stone transition hover:bg-red-50 hover:text-red-600"
-            aria-label="Удалить"
-          >
-            <Trash2 className="size-4" />
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={remove}
+              className="inline-flex size-9 items-center justify-center rounded-xl text-stone transition hover:bg-red-50 hover:text-red-600"
+              aria-label="Удалить"
+            >
+              <Trash2 className="size-4" />
+            </button>
+          )}
         </div>
       </div>
     </article>

@@ -1,7 +1,16 @@
-import { WishlistDashboard } from '@/components/WishlistDashboard'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { HomePage } from '@/pages/HomePage'
+import { WishlistPage } from '@/pages/WishlistPage'
 
 function App() {
-  return <WishlistDashboard />
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/w/:slug" element={<WishlistPage />} />
+      </Routes>
+    </BrowserRouter>
+  )
 }
 
 export default App

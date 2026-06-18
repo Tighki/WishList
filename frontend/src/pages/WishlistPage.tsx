@@ -1,16 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
 import { AddItemForm } from '@/components/AddItemForm'
 import { EmptyState } from '@/components/EmptyState'
 import { Header } from '@/components/Header'
 import { ProductCard } from '@/components/ProductCard'
+import { ShareButton } from '@/components/ShareButton'
 import { ApiError, wishlistApi } from '@/lib/api'
-import type { WishlistItem } from '@/types/wishlist'
+import { getEditToken } from '@/lib/edit-token'
+import type { CreateItemPayload, Wishlist, WishlistItem } from '@/types/wishlist'
 
-export function WishlistDashboard() {
+export function WishlistPage() {
+  const { slug } = useParams<{ slug: string }>()
+  const [wishlist, setWishlist] = useState<Wishlist | null>(null)
   const [items, setItems] = useState<WishlistItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isBootstrapping, setIsBootstrapping] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [notFound, setNotFound] = useState(false)
+
+  const editToken = slug ? getEditToken(slug) : null
+  const canEdit = Boolean(editToken)
 
   const total = useMemo(
     () =>
@@ -29,24 +38,35 @@ export function WishlistDashboard() {
   )
 
   useEffect(() => {
-    wishlistApi
-      .getItems()
-      .then(setItems)
-      .catch(() => setError('Не удалось загрузить вишлист. Запущен ли backend?'))
-      .finally(() => setIsBootstrapping(false))
-  }, [])
+    if (!slug) return
 
-  async function handleAdd(url: string, quantity: number) {
+    wishlistApi
+      .getWishlist(slug)
+      .then((data) => {
+        setWishlist(data.wishlist)
+        setItems(data.items)
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 404) {
+          setNotFound(true)
+          return
+        }
+        setError('Не удалось загрузить вишлист. Запущен ли backend?')
+      })
+      .finally(() => setIsBootstrapping(false))
+  }, [slug])
+
+  async function handleAdd(payload: CreateItemPayload) {
+    if (!slug || !editToken) return
+
     setIsLoading(true)
     setError(null)
     try {
-      const item = await wishlistApi.addItem(url, quantity)
+      const item = await wishlistApi.addItem(slug, payload, editToken)
       setItems((prev) => [item, ...prev])
     } catch (err) {
       const message =
-        err instanceof ApiError
-          ? err.message
-          : 'Не удалось добавить товар. Проверьте ссылку и backend.'
+        err instanceof ApiError ? err.message : 'Не удалось добавить товар'
       setError(message)
     } finally {
       setIsLoading(false)
@@ -54,9 +74,11 @@ export function WishlistDashboard() {
   }
 
   async function handleRemove(id: string) {
+    if (!slug || !editToken) return
+
     setError(null)
     try {
-      await wishlistApi.removeItem(id)
+      await wishlistApi.removeItem(slug, id, editToken)
       setItems((prev) => prev.filter((item) => item.id !== id))
     } catch (err) {
       const message =
@@ -66,6 +88,8 @@ export function WishlistDashboard() {
   }
 
   async function handleQuantityChange(id: string, quantity: number) {
+    if (!slug || !editToken) return
+
     setError(null)
     const previous = items
     setItems((prev) =>
@@ -73,7 +97,7 @@ export function WishlistDashboard() {
     )
 
     try {
-      const updated = await wishlistApi.updateQuantity(id, quantity)
+      const updated = await wishlistApi.updateItem(slug, id, { quantity }, editToken)
       setItems((prev) => prev.map((item) => (item.id === id ? updated : item)))
     } catch (err) {
       setItems(previous)
@@ -83,12 +107,47 @@ export function WishlistDashboard() {
     }
   }
 
+  if (!slug) {
+    return null
+  }
+
+  if (notFound) {
+    return (
+      <div className="flex min-h-svh items-center justify-center px-4">
+        <div className="max-w-md rounded-3xl border border-stone/10 bg-white p-8 text-center shadow-sm">
+          <h1 className="text-xl font-semibold text-charcoal">Вишлист не найден</h1>
+          <p className="mt-2 text-sm text-stone">Проверьте ссылку или создайте новый список</p>
+          <Link
+            to="/"
+            className="mt-6 inline-flex rounded-2xl bg-terracotta px-5 py-3 text-sm font-medium text-white"
+          >
+            На главную
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-svh">
-      <Header total={total} itemCount={activeCount} />
+      <Header
+        total={total}
+        itemCount={activeCount}
+        title={wishlist?.title ?? 'WishList'}
+        subtitle={canEdit ? 'Ваш вишлист' : 'Просмотр вишлиста'}
+        actions={slug ? <ShareButton slug={slug} /> : undefined}
+      />
 
       <main>
-        <AddItemForm onAdd={handleAdd} isLoading={isLoading} />
+        {canEdit && <AddItemForm onAdd={handleAdd} isLoading={isLoading} />}
+
+        {!canEdit && !isBootstrapping && (
+          <div className="mx-auto max-w-3xl px-4 pt-8 text-center sm:px-6">
+            <p className="rounded-2xl border border-stone/10 bg-white px-4 py-3 text-sm text-stone">
+              Вы смотрите чужой вишлист. Редактирование доступно только владельцу.
+            </p>
+          </div>
+        )}
 
         {error && (
           <div className="mx-auto mt-4 max-w-3xl px-4 sm:px-6">
@@ -102,12 +161,14 @@ export function WishlistDashboard() {
           {isBootstrapping ? (
             <p className="text-center text-sm text-stone">Загрузка вишлиста…</p>
           ) : items.length === 0 ? (
-            <EmptyState />
+            <EmptyState readOnly={!canEdit} />
           ) : (
             <>
               <div className="mb-6 flex items-end justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold text-charcoal">Мой вишлист</h2>
+                  <h2 className="text-xl font-semibold text-charcoal">
+                    {wishlist?.title ?? 'Вишлист'}
+                  </h2>
                   <p className="mt-1 text-sm text-stone">
                     {items.length} {items.length === 1 ? 'позиция' : 'позиций'} в списке
                   </p>
@@ -119,8 +180,9 @@ export function WishlistDashboard() {
                   <ProductCard
                     key={item.id}
                     item={item}
-                    onRemove={handleRemove}
-                    onQuantityChange={handleQuantityChange}
+                    readOnly={!canEdit}
+                    onRemove={canEdit ? handleRemove : undefined}
+                    onQuantityChange={canEdit ? handleQuantityChange : undefined}
                   />
                 ))}
               </div>

@@ -1,6 +1,10 @@
 import { PackageOpen } from 'lucide-react'
 
-export function EmptyState() {
+interface EmptyStateProps {
+  readOnly?: boolean
+}
+
+export function EmptyState({ readOnly = false }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-stone/25 bg-white/60 px-6 py-16 text-center">
       <div className="flex size-16 items-center justify-center rounded-2xl bg-sand text-stone">
@@ -10,8 +14,9 @@ export function EmptyState() {
         Список пока пуст
       </h3>
       <p className="mt-2 max-w-sm text-sm text-stone">
-        Добавьте первый товар по ссылке с Ozon — карточка появится здесь с фото и
-        ценой
+        {readOnly
+          ? 'Владелец ещё не добавил товары в этот вишлист'
+          : 'Добавьте первый товар вручную — карточка появится здесь'}
       </p>
     </div>
   )

@@ -1,92 +1,175 @@
-import { Link2, Loader2, Plus } from 'lucide-react'
+import { Loader2, Plus } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { cn } from '@/lib/utils'
+import type { CreateItemPayload } from '@/types/wishlist'
 
 interface AddItemFormProps {
-  onAdd: (url: string, quantity: number) => void
+  onAdd: (payload: CreateItemPayload) => void
   isLoading?: boolean
 }
 
+const emptyForm = {
+  title: '',
+  description: '',
+  price: '',
+  imageUrl: '',
+  url: '',
+  quantity: 1,
+}
+
 export function AddItemForm({ onAdd, isLoading = false }: AddItemFormProps) {
-  const [url, setUrl] = useState('')
-  const [quantity, setQuantity] = useState(1)
+  const [form, setForm] = useState(emptyForm)
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    const trimmed = url.trim()
-    if (!trimmed) return
-    onAdd(trimmed, quantity)
-    setUrl('')
-    setQuantity(1)
+    const title = form.title.trim()
+    const price = Number.parseFloat(form.price.replace(',', '.'))
+    if (!title || Number.isNaN(price)) return
+
+    onAdd({
+      title,
+      description: form.description.trim() || undefined,
+      price,
+      imageUrl: form.imageUrl.trim() || undefined,
+      url: form.url.trim() || undefined,
+      quantity: form.quantity,
+    })
+    setForm(emptyForm)
   }
 
   return (
     <section className="mx-auto max-w-3xl px-4 pt-10 sm:px-6 sm:pt-14">
       <div className="text-center">
         <h2 className="text-2xl font-semibold tracking-tight text-charcoal sm:text-3xl">
-          Собираем список для ремонта
+          Добавить товар
         </h2>
         <p className="mt-2 text-sm text-stone sm:text-base">
-          Вставьте ссылку с Ozon — подтянем фото, описание и цену
+          Заполните карточку вручную — название, цену и по желанию ссылку и фото
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <Link2 className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-stone" />
+      <form onSubmit={handleSubmit} className="mt-8 space-y-4 rounded-3xl border border-stone/10 bg-white p-5 shadow-sm sm:p-6">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-charcoal">Название *</label>
+          <input
+            type="text"
+            value={form.title}
+            onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+            placeholder="Например, смеситель для кухни"
+            className={cn(
+              'w-full rounded-2xl border border-stone/20 bg-white px-4 py-3',
+              'text-sm text-charcoal placeholder:text-stone/60',
+              'focus:border-terracotta/40 focus:ring-2 focus:ring-terracotta/20 focus:outline-none',
+            )}
+            disabled={isLoading}
+            required
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-charcoal">Цена, ₽ *</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={form.price}
+              onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))}
+              placeholder="12 990"
+              className={cn(
+                'w-full rounded-2xl border border-stone/20 bg-white px-4 py-3',
+                'text-sm text-charcoal placeholder:text-stone/60',
+                'focus:border-terracotta/40 focus:ring-2 focus:ring-terracotta/20 focus:outline-none',
+              )}
+              disabled={isLoading}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-charcoal">Количество</label>
+            <input
+              type="number"
+              min={1}
+              max={999}
+              value={form.quantity}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  quantity: Math.max(1, Number.parseInt(event.target.value, 10) || 1),
+                }))
+              }
+              className={cn(
+                'w-full rounded-2xl border border-stone/20 bg-white px-4 py-3',
+                'text-sm text-charcoal',
+                'focus:border-terracotta/40 focus:ring-2 focus:ring-terracotta/20 focus:outline-none',
+              )}
+              disabled={isLoading}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-charcoal">Описание</label>
+          <textarea
+            value={form.description}
+            onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+            placeholder="Цвет, размер, магазин..."
+            rows={2}
+            className={cn(
+              'w-full resize-none rounded-2xl border border-stone/20 bg-white px-4 py-3',
+              'text-sm text-charcoal placeholder:text-stone/60',
+              'focus:border-terracotta/40 focus:ring-2 focus:ring-terracotta/20 focus:outline-none',
+            )}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-charcoal">Ссылка на товар</label>
             <input
               type="url"
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-              placeholder="https://www.ozon.ru/product/..."
+              value={form.url}
+              onChange={(event) => setForm((prev) => ({ ...prev, url: event.target.value }))}
+              placeholder="https://..."
               className={cn(
-                'w-full rounded-2xl border border-stone/20 bg-white py-3.5 pr-4 pl-11',
+                'w-full rounded-2xl border border-stone/20 bg-white px-4 py-3',
                 'text-sm text-charcoal placeholder:text-stone/60',
-                'shadow-sm transition focus:border-terracotta/40 focus:ring-2 focus:ring-terracotta/20 focus:outline-none',
+                'focus:border-terracotta/40 focus:ring-2 focus:ring-terracotta/20 focus:outline-none',
               )}
               disabled={isLoading}
             />
           </div>
 
-          <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 text-sm text-stone">
-              <span className="whitespace-nowrap">Кол-во</span>
-              <input
-                type="number"
-                min={1}
-                max={999}
-                value={quantity}
-                onChange={(event) =>
-                  setQuantity(Math.max(1, Number.parseInt(event.target.value, 10) || 1))
-                }
-                className={cn(
-                  'w-16 rounded-xl border border-stone/20 bg-white px-3 py-3.5 text-center',
-                  'text-sm font-medium text-charcoal',
-                  'focus:border-terracotta/40 focus:ring-2 focus:ring-terracotta/20 focus:outline-none',
-                )}
-                disabled={isLoading}
-              />
-            </label>
-
-            <button
-              type="submit"
-              disabled={isLoading || !url.trim()}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-charcoal">Ссылка на фото</label>
+            <input
+              type="url"
+              value={form.imageUrl}
+              onChange={(event) => setForm((prev) => ({ ...prev, imageUrl: event.target.value }))}
+              placeholder="https://..."
               className={cn(
-                'inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5',
-                'bg-terracotta text-sm font-medium text-white shadow-md shadow-terracotta/25',
-                'transition hover:bg-terracotta-dark disabled:cursor-not-allowed disabled:opacity-50',
+                'w-full rounded-2xl border border-stone/20 bg-white px-4 py-3',
+                'text-sm text-charcoal placeholder:text-stone/60',
+                'focus:border-terracotta/40 focus:ring-2 focus:ring-terracotta/20 focus:outline-none',
               )}
-            >
-              {isLoading ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Plus className="size-4" />
-              )}
-              Добавить
-            </button>
+              disabled={isLoading}
+            />
           </div>
         </div>
+
+        <button
+          type="submit"
+          disabled={isLoading || !form.title.trim() || !form.price.trim()}
+          className={cn(
+            'inline-flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-3.5',
+            'bg-terracotta text-sm font-medium text-white shadow-md shadow-terracotta/25',
+            'transition hover:bg-terracotta-dark disabled:cursor-not-allowed disabled:opacity-50',
+          )}
+        >
+          {isLoading ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+          Добавить в список
+        </button>
       </form>
     </section>
   )
