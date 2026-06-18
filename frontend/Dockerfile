@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Dokploy + Traefik: static SPA on PORT from environment (no nginx).
+# Dokploy + Traefik: Node static server on PORT (default 3000).
 
 FROM node:22-bookworm AS build
 WORKDIR /app
@@ -16,16 +16,15 @@ COPY src ./src
 
 RUN npm run build
 
-FROM node:22-alpine AS runner
+FROM node:22-bookworm AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
 
-RUN npm install -g serve@14.2.4
-
+COPY server.mjs ./server.mjs
 COPY --from=build /app/dist ./dist
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "serve -s dist -l tcp://0.0.0.0:${PORT}"]
+CMD ["node", "server.mjs"]
