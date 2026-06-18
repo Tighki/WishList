@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1
-# Root Dockerfile for Dokploy: build context is repository root.
+# Dokploy + Traefik: static SPA on PORT from environment (no nginx).
 
 FROM node:22-bookworm AS build
 WORKDIR /app
 
-ARG VITE_API_URL=/api
+ARG VITE_API_URL
 ENV VITE_API_URL=${VITE_API_URL}
 
 COPY frontend/package.json frontend/package-lock.json ./
@@ -16,16 +16,16 @@ COPY frontend/src ./src
 
 RUN npm run build
 
-FROM nginx:1.27-alpine AS runner
+FROM node:22-alpine AS runner
+WORKDIR /app
 
-ENV API_UPSTREAM=http://host.docker.internal:3001/api/
+ENV NODE_ENV=production
+ENV PORT=3000
 
-COPY frontend/nginx.conf.template /etc/nginx/templates/default.conf.template
-COPY frontend/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+RUN npm install -g serve@14.2.4
 
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/dist ./dist
 
-EXPOSE 80
+EXPOSE 3000
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["sh", "-c", "serve -s dist -l tcp://0.0.0.0:${PORT}"]
