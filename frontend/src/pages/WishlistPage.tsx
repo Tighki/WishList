@@ -5,9 +5,10 @@ import { EmptyState } from '@/components/EmptyState'
 import { Header } from '@/components/Header'
 import { ProductCard } from '@/components/ProductCard'
 import { ShareButton } from '@/components/ShareButton'
+import { InviteMembersButton } from '@/components/InviteMembersButton'
 import { ApiError, wishlistApi } from '@/lib/api'
 import { getEditToken, saveEditToken } from '@/lib/edit-token'
-import type { CreateItemPayload, Wishlist, WishlistItem } from '@/types/wishlist'
+import type { CreateItemPayload, Wishlist, WishlistItem, WishlistMember } from '@/types/wishlist'
 
 export function WishlistPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -18,6 +19,9 @@ export function WishlistPage() {
   const [error, setError] = useState<string | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [canEdit, setCanEdit] = useState(false)
+  const [isOwner, setIsOwner] = useState(false)
+  const [isMember, setIsMember] = useState(false)
+  const [members, setMembers] = useState<WishlistMember[]>([])
   const [shareEditToken, setShareEditToken] = useState<string | null>(null)
 
   const editToken = slug ? getEditToken(slug) : null
@@ -61,6 +65,9 @@ export function WishlistPage() {
         setItems(data.items)
         const hasEditAccess = data.canEdit || Boolean(getEditToken(slug))
         setCanEdit(hasEditAccess)
+        setIsOwner(data.isOwner)
+        setIsMember(data.isMember)
+        setMembers(data.members ?? [])
         setShareEditToken(data.editToken ?? getEditToken(slug))
       })
       .catch((err) => {
@@ -156,8 +163,29 @@ export function WishlistPage() {
         total={total}
         itemCount={activeCount}
         title={wishlist?.title ?? 'WishList'}
-        subtitle={canEdit ? 'Ваш вишлист' : 'Просмотр вишлиста'}
-        actions={slug ? <ShareButton slug={slug} editToken={shareEditToken} /> : undefined}
+        subtitle={
+          canEdit
+            ? isOwner
+              ? 'Ваш вишлист'
+              : isMember
+                ? 'Совместный вишлист'
+                : 'Ваш вишлист'
+            : 'Просмотр вишлиста'
+        }
+        actions={
+          slug ? (
+            <div className="flex items-center gap-2">
+              {isOwner && (
+                <InviteMembersButton
+                  slug={slug}
+                  members={members}
+                  onMembersChange={setMembers}
+                />
+              )}
+              {isOwner && <ShareButton slug={slug} editToken={shareEditToken} />}
+            </div>
+          ) : undefined
+        }
       />
 
       <main>

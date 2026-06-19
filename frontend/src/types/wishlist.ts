@@ -8,6 +8,15 @@ export interface Wishlist {
 export interface WishlistSummary extends Wishlist {
   itemCount: number
   total: number
+  role: 'owner' | 'member'
+}
+
+export interface WishlistMember {
+  id: string
+  userId: string
+  name: string
+  email: string
+  createdAt: string
 }
 
 export interface WishlistItem {

@@ -180,6 +180,7 @@ export function MyWishlistsPage() {
             {wishlists.map((wishlist) => {
               const isEditing = editingSlug === wishlist.slug
               const isDeleting = deletingSlug === wishlist.slug
+              const isOwner = wishlist.role === 'owner'
 
               return (
                 <div
@@ -200,17 +201,29 @@ export function MyWishlistsPage() {
                   )}
                 >
                   <div className="min-w-0 flex-1">
-                    <WishlistTitleEditor
-                      title={wishlist.title}
-                      titleClassName="text-lg"
-                      hideEditButton
-                      editing={isEditing}
-                      onEditingChange={(editing) =>
-                        setEditingSlug(editing ? wishlist.slug : null)
-                      }
-                      onSave={(title) => handleRename(wishlist.slug, title)}
-                    />
+                    {isOwner ? (
+                      <WishlistTitleEditor
+                        title={wishlist.title}
+                        titleClassName="text-lg"
+                        hideEditButton
+                        editing={isEditing}
+                        onEditingChange={(editing) =>
+                          setEditingSlug(editing ? wishlist.slug : null)
+                        }
+                        onSave={(title) => handleRename(wishlist.slug, title)}
+                      />
+                    ) : (
+                      <p className="truncate text-lg font-medium text-charcoal">{wishlist.title}</p>
+                    )}
                     <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-stone">
+                      {!isOwner && (
+                        <>
+                          <span className="rounded-full bg-terracotta/10 px-2 py-0.5 text-xs font-medium text-terracotta">
+                            Совместный
+                          </span>
+                          <span className="text-stone/40">·</span>
+                        </>
+                      )}
                       <span>{formatItemCount(wishlist.itemCount)}</span>
                       <span className="text-stone/40">·</span>
                       <span className="font-medium text-charcoal">
@@ -223,33 +236,35 @@ export function MyWishlistsPage() {
                     </div>
                   </div>
 
-                  <div
-                    className="flex shrink-0 items-center gap-1"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    <button
-                      type="button"
-                      disabled={isDeleting}
-                      onClick={() => setEditingSlug(wishlist.slug)}
-                      className="rounded-xl p-2.5 text-stone transition hover:bg-sand/60 hover:text-terracotta"
-                      aria-label="Переименовать"
+                  {isOwner && (
+                    <div
+                      className="flex shrink-0 items-center gap-1"
+                      onClick={(event) => event.stopPropagation()}
                     >
-                      <Pencil className="size-4" />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isDeleting}
-                      onClick={() => void handleDelete(wishlist)}
-                      className="rounded-xl p-2.5 text-stone transition hover:bg-red-50 hover:text-red-600"
-                      aria-label="Удалить"
-                    >
-                      {isDeleting ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="size-4" />
-                      )}
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        disabled={isDeleting}
+                        onClick={() => setEditingSlug(wishlist.slug)}
+                        className="rounded-xl p-2.5 text-stone transition hover:bg-sand/60 hover:text-terracotta"
+                        aria-label="Переименовать"
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isDeleting}
+                        onClick={() => void handleDelete(wishlist)}
+                        className="rounded-xl p-2.5 text-stone transition hover:bg-red-50 hover:text-red-600"
+                        aria-label="Удалить"
+                      >
+                        {isDeleting ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="size-4" />
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )
             })}

@@ -1,4 +1,10 @@
-import type { CreateItemPayload, Wishlist, WishlistItem, WishlistSummary } from '@/types/wishlist'
+import type {
+  CreateItemPayload,
+  Wishlist,
+  WishlistItem,
+  WishlistMember,
+  WishlistSummary,
+} from '@/types/wishlist'
 import type { User } from '@/types/user'
 import { getAuthToken } from '@/lib/auth'
 
@@ -26,6 +32,15 @@ interface ApiWishlist {
 interface ApiWishlistSummary extends ApiWishlist {
   itemCount: number
   total: number
+  role: 'owner' | 'member'
+}
+
+interface ApiWishlistMember {
+  id: string
+  userId: string
+  name: string
+  email: string
+  createdAt: string
 }
 
 interface ApiUser {
@@ -60,6 +75,17 @@ function mapWishlistSummary(wishlist: ApiWishlistSummary): WishlistSummary {
     createdAt: wishlist.createdAt,
     itemCount: wishlist.itemCount,
     total: wishlist.total,
+    role: wishlist.role,
+  }
+}
+
+function mapMember(member: ApiWishlistMember): WishlistMember {
+  return {
+    id: member.id,
+    userId: member.userId,
+    name: member.name,
+    email: member.email,
+    createdAt: member.createdAt,
   }
 }
 
@@ -216,11 +242,22 @@ export const wishlistApi = {
   async getWishlist(
     slug: string,
     editToken?: string,
-  ): Promise<{ wishlist: Wishlist; items: WishlistItem[]; canEdit: boolean; editToken?: string }> {
+  ): Promise<{
+    wishlist: Wishlist
+    items: WishlistItem[]
+    canEdit: boolean
+    isOwner: boolean
+    isMember: boolean
+    members?: WishlistMember[]
+    editToken?: string
+  }> {
     const data = await request<{
       wishlist: ApiWishlist
       items: ApiItem[]
       canEdit?: boolean
+      isOwner?: boolean
+      isMember?: boolean
+      members?: ApiWishlistMember[]
       editToken?: string
     }>(`/wishlists/${slug}`, {
       editToken,
@@ -229,8 +266,25 @@ export const wishlistApi = {
       wishlist: mapWishlist(data.wishlist),
       items: data.items.map(mapItem),
       canEdit: Boolean(data.canEdit),
+      isOwner: Boolean(data.isOwner),
+      isMember: Boolean(data.isMember),
+      members: data.members?.map(mapMember),
       editToken: data.editToken,
     }
+  },
+
+  async inviteMember(slug: string, email: string): Promise<WishlistMember> {
+    const data = await request<{ member: ApiWishlistMember }>(`/wishlists/${slug}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    })
+    return mapMember(data.member)
+  },
+
+  async removeMember(slug: string, userId: string): Promise<void> {
+    await request<void>(`/wishlists/${slug}/members/${userId}`, {
+      method: 'DELETE',
+    })
   },
 
   async addItem(
