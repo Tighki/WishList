@@ -7,6 +7,9 @@ interface WishlistTitleEditorProps {
   onSave: (title: string) => Promise<void>
   className?: string
   titleClassName?: string
+  hideEditButton?: boolean
+  editing?: boolean
+  onEditingChange?: (editing: boolean) => void
 }
 
 export function WishlistTitleEditor({
@@ -14,11 +17,25 @@ export function WishlistTitleEditor({
   onSave,
   className,
   titleClassName,
+  hideEditButton = false,
+  editing: controlledEditing,
+  onEditingChange,
 }: WishlistTitleEditorProps) {
-  const [isEditing, setIsEditing] = useState(false)
+  const [internalEditing, setInternalEditing] = useState(false)
   const [value, setValue] = useState(title)
   const [isSaving, setIsSaving] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const isControlled = controlledEditing !== undefined
+  const isEditing = isControlled ? controlledEditing : internalEditing
+
+  function setEditing(next: boolean) {
+    if (isControlled) {
+      onEditingChange?.(next)
+    } else {
+      setInternalEditing(next)
+    }
+  }
 
   useEffect(() => {
     setValue(title)
@@ -35,14 +52,14 @@ export function WishlistTitleEditor({
     const nextTitle = value.trim()
     if (!nextTitle || nextTitle === title) {
       setValue(title)
-      setIsEditing(false)
+      setEditing(false)
       return
     }
 
     setIsSaving(true)
     try {
       await onSave(nextTitle)
-      setIsEditing(false)
+      setEditing(false)
     } catch {
       setValue(title)
     } finally {
@@ -52,12 +69,15 @@ export function WishlistTitleEditor({
 
   function handleCancel() {
     setValue(title)
-    setIsEditing(false)
+    setEditing(false)
   }
 
   if (isEditing) {
     return (
-      <div className={cn('flex min-w-0 items-center gap-2', className)} onClick={(e) => e.preventDefault()}>
+      <div
+        className={cn('flex min-w-0 items-center gap-2', className)}
+        onClick={(event) => event.stopPropagation()}
+      >
         <input
           ref={inputRef}
           type="text"
@@ -75,6 +95,7 @@ export function WishlistTitleEditor({
               handleCancel()
             }
           }}
+          onClick={(event) => event.stopPropagation()}
           className={cn(
             'min-w-0 flex-1 rounded-xl border border-stone/20 bg-white px-3 py-2',
             'text-sm text-charcoal focus:border-terracotta/40 focus:ring-2 focus:ring-terracotta/20 focus:outline-none',
@@ -84,7 +105,10 @@ export function WishlistTitleEditor({
         <button
           type="button"
           disabled={isSaving || !value.trim()}
-          onClick={() => void handleSave()}
+          onClick={(event) => {
+            event.stopPropagation()
+            void handleSave()
+          }}
           className="rounded-xl bg-terracotta p-2 text-white transition hover:bg-terracotta-dark disabled:opacity-50"
           aria-label="Сохранить"
         >
@@ -93,7 +117,10 @@ export function WishlistTitleEditor({
         <button
           type="button"
           disabled={isSaving}
-          onClick={handleCancel}
+          onClick={(event) => {
+            event.stopPropagation()
+            handleCancel()
+          }}
           className="rounded-xl p-2 text-stone transition hover:bg-sand/60 hover:text-charcoal"
           aria-label="Отмена"
         >
@@ -106,18 +133,20 @@ export function WishlistTitleEditor({
   return (
     <div className={cn('flex min-w-0 items-center gap-2', className)}>
       <p className={cn('truncate font-medium text-charcoal', titleClassName)}>{title}</p>
-      <button
-        type="button"
-        onClick={(event) => {
-          event.preventDefault()
-          event.stopPropagation()
-          setIsEditing(true)
-        }}
-        className="shrink-0 rounded-lg p-1.5 text-stone transition hover:bg-sand/60 hover:text-terracotta"
-        aria-label="Переименовать"
-      >
-        <Pencil className="size-4" />
-      </button>
+      {!hideEditButton && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            setEditing(true)
+          }}
+          className="shrink-0 rounded-lg p-1.5 text-stone transition hover:bg-sand/60 hover:text-terracotta"
+          aria-label="Переименовать"
+        >
+          <Pencil className="size-4" />
+        </button>
+      )}
     </div>
   )
 }

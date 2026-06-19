@@ -1,11 +1,11 @@
-import { ArrowRight, Gift, Loader2, Plus, Sparkles } from 'lucide-react'
+import { Gift, Loader2, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { SiteHeader } from '@/components/SiteHeader'
 import { WishlistTitleEditor } from '@/components/WishlistTitleEditor'
 import { useAuth } from '@/context/AuthContext'
 import { ApiError, wishlistApi } from '@/lib/api'
-import { saveEditToken } from '@/lib/edit-token'
+import { clearEditToken, saveEditToken } from '@/lib/edit-token'
 import { cn, formatPrice } from '@/lib/utils'
 import type { WishlistSummary } from '@/types/wishlist'
 
@@ -24,6 +24,8 @@ export function MyWishlistsPage() {
   const [wishlists, setWishlists] = useState<WishlistSummary[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
+  const [editingSlug, setEditingSlug] = useState<string | null>(null)
+  const [deletingSlug, setDeletingSlug] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -67,6 +69,36 @@ export function MyWishlistsPage() {
         wishlist.slug === slug ? { ...wishlist, title: updated.title } : wishlist,
       ),
     )
+    setEditingSlug(null)
+  }
+
+  async function handleDelete(wishlist: WishlistSummary) {
+    const confirmed = window.confirm(
+      `Удалить вишлист «${wishlist.title}»? Это действие нельзя отменить.`,
+    )
+    if (!confirmed) return
+
+    setDeletingSlug(wishlist.slug)
+    setError(null)
+    try {
+      await wishlistApi.deleteWishlist(wishlist.slug)
+      clearEditToken(wishlist.slug)
+      setWishlists((prev) => prev.filter((entry) => entry.slug !== wishlist.slug))
+      if (editingSlug === wishlist.slug) {
+        setEditingSlug(null)
+      }
+    } catch (err) {
+      const message =
+        err instanceof ApiError ? err.message : 'Не удалось удалить вишлист'
+      setError(message)
+    } finally {
+      setDeletingSlug(null)
+    }
+  }
+
+  function openWishlist(slug: string) {
+    if (editingSlug === slug) return
+    navigate(`/w/${slug}`)
   }
 
   if (isAuthLoading || (!user && isLoading)) {
@@ -145,37 +177,82 @@ export function MyWishlistsPage() {
           </div>
         ) : (
           <div className="mt-8 space-y-3">
-            {wishlists.map((wishlist) => (
-              <div
-                key={wishlist.id}
-                className={cn(
-                  'group flex items-center justify-between gap-4 rounded-3xl border border-stone/10',
-                  'bg-white px-5 py-4 shadow-sm transition hover:border-terracotta/20 hover:shadow-md',
-                )}
-              >
-                <div className="min-w-0 flex-1">
-                  <WishlistTitleEditor
-                    title={wishlist.title}
-                    titleClassName="text-lg"
-                    onSave={(title) => handleRename(wishlist.slug, title)}
-                  />
-                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-stone">
-                    <span>{formatItemCount(wishlist.itemCount)}</span>
-                    <span className="text-stone/40">·</span>
-                    <span className="font-medium text-charcoal">{formatPrice(wishlist.total)}</span>
-                    <span className="text-stone/40">·</span>
-                    <span>Создан {new Date(wishlist.createdAt).toLocaleDateString('ru-RU')}</span>
+            {wishlists.map((wishlist) => {
+              const isEditing = editingSlug === wishlist.slug
+              const isDeleting = deletingSlug === wishlist.slug
+
+              return (
+                <div
+                  key={wishlist.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openWishlist(wishlist.slug)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      openWishlist(wishlist.slug)
+                    }
+                  }}
+                  className={cn(
+                    'flex cursor-pointer items-center justify-between gap-4 rounded-3xl border border-stone/10',
+                    'bg-white px-5 py-4 shadow-sm transition hover:border-terracotta/20 hover:shadow-md',
+                    isEditing && 'cursor-default',
+                  )}
+                >
+                  <div className="min-w-0 flex-1">
+                    <WishlistTitleEditor
+                      title={wishlist.title}
+                      titleClassName="text-lg"
+                      hideEditButton
+                      editing={isEditing}
+                      onEditingChange={(editing) =>
+                        setEditingSlug(editing ? wishlist.slug : null)
+                      }
+                      onSave={(title) => handleRename(wishlist.slug, title)}
+                    />
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-stone">
+                      <span>{formatItemCount(wishlist.itemCount)}</span>
+                      <span className="text-stone/40">·</span>
+                      <span className="font-medium text-charcoal">
+                        {formatPrice(wishlist.total)}
+                      </span>
+                      <span className="text-stone/40">·</span>
+                      <span>
+                        Создан {new Date(wishlist.createdAt).toLocaleDateString('ru-RU')}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div
+                    className="flex shrink-0 items-center gap-1"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      disabled={isDeleting}
+                      onClick={() => setEditingSlug(wishlist.slug)}
+                      className="rounded-xl p-2.5 text-stone transition hover:bg-sand/60 hover:text-terracotta"
+                      aria-label="Переименовать"
+                    >
+                      <Pencil className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isDeleting}
+                      onClick={() => void handleDelete(wishlist)}
+                      className="rounded-xl p-2.5 text-stone transition hover:bg-red-50 hover:text-red-600"
+                      aria-label="Удалить"
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="size-4" />
+                      )}
+                    </button>
                   </div>
                 </div>
-                <Link
-                  to={`/w/${wishlist.slug}`}
-                  className="shrink-0 rounded-xl p-2 text-stone transition hover:bg-sand/60 hover:text-terracotta"
-                  aria-label="Открыть вишлист"
-                >
-                  <ArrowRight className="size-5" />
-                </Link>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </main>

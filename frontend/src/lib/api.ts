@@ -206,6 +206,13 @@ export const wishlistApi = {
     return mapWishlist(data.wishlist)
   },
 
+  async deleteWishlist(slug: string, editToken?: string): Promise<void> {
+    await request<void>(`/wishlists/${slug}`, {
+      method: 'DELETE',
+      editToken,
+    })
+  },
+
   async getWishlist(
     slug: string,
     editToken?: string,

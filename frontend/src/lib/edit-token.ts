@@ -8,6 +8,10 @@ export function getEditToken(slug: string): string | null {
   return localStorage.getItem(`${STORAGE_PREFIX}${slug}`)
 }
 
+export function clearEditToken(slug: string): void {
+  localStorage.removeItem(`${STORAGE_PREFIX}${slug}`)
+}
+
 export function getShareUrl(slug: string): string {
   return `${window.location.origin}/w/${slug}`
 }
