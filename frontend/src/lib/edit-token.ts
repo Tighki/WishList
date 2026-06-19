@@ -12,6 +12,10 @@ export function clearEditToken(slug: string): void {
   localStorage.removeItem(`${STORAGE_PREFIX}${slug}`)
 }
 
-export function getShareUrl(slug: string): string {
-  return `${window.location.origin}/w/${slug}`
+export function getShareUrl(slug: string, mode: 'view' | 'edit' = 'view', editToken?: string): string {
+  const base = `${window.location.origin}/w/${slug}`
+  if (mode === 'edit' && editToken) {
+    return `${base}?edit=${encodeURIComponent(editToken)}`
+  }
+  return base
 }

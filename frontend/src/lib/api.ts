@@ -216,11 +216,12 @@ export const wishlistApi = {
   async getWishlist(
     slug: string,
     editToken?: string,
-  ): Promise<{ wishlist: Wishlist; items: WishlistItem[]; canEdit: boolean }> {
+  ): Promise<{ wishlist: Wishlist; items: WishlistItem[]; canEdit: boolean; editToken?: string }> {
     const data = await request<{
       wishlist: ApiWishlist
       items: ApiItem[]
       canEdit?: boolean
+      editToken?: string
     }>(`/wishlists/${slug}`, {
       editToken,
     })
@@ -228,6 +229,7 @@ export const wishlistApi = {
       wishlist: mapWishlist(data.wishlist),
       items: data.items.map(mapItem),
       canEdit: Boolean(data.canEdit),
+      editToken: data.editToken,
     }
   },
 

@@ -6,7 +6,7 @@ import { Header } from '@/components/Header'
 import { ProductCard } from '@/components/ProductCard'
 import { ShareButton } from '@/components/ShareButton'
 import { ApiError, wishlistApi } from '@/lib/api'
-import { getEditToken } from '@/lib/edit-token'
+import { getEditToken, saveEditToken } from '@/lib/edit-token'
 import type { CreateItemPayload, Wishlist, WishlistItem } from '@/types/wishlist'
 
 export function WishlistPage() {
@@ -18,8 +18,20 @@ export function WishlistPage() {
   const [error, setError] = useState<string | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [canEdit, setCanEdit] = useState(false)
+  const [shareEditToken, setShareEditToken] = useState<string | null>(null)
 
   const editToken = slug ? getEditToken(slug) : null
+
+  useEffect(() => {
+    if (!slug) return
+
+    const params = new URLSearchParams(window.location.search)
+    const importToken = params.get('edit')?.trim()
+    if (importToken) {
+      saveEditToken(slug, importToken)
+      window.history.replaceState({}, '', `/w/${slug}`)
+    }
+  }, [slug])
 
   const total = useMemo(
     () =>
@@ -40,12 +52,16 @@ export function WishlistPage() {
   useEffect(() => {
     if (!slug) return
 
+    const token = getEditToken(slug) ?? undefined
+
     wishlistApi
-      .getWishlist(slug, editToken ?? undefined)
+      .getWishlist(slug, token)
       .then((data) => {
         setWishlist(data.wishlist)
         setItems(data.items)
-        setCanEdit(data.canEdit || Boolean(editToken))
+        const hasEditAccess = data.canEdit || Boolean(getEditToken(slug))
+        setCanEdit(hasEditAccess)
+        setShareEditToken(data.editToken ?? getEditToken(slug))
       })
       .catch((err) => {
         if (err instanceof ApiError && err.status === 404) {
@@ -55,7 +71,7 @@ export function WishlistPage() {
         setError('Не удалось загрузить вишлист. Запущен ли backend?')
       })
       .finally(() => setIsBootstrapping(false))
-  }, [slug, editToken])
+  }, [slug])
 
   async function handleAdd(payload: CreateItemPayload) {
     if (!slug || !canEdit) return
@@ -141,7 +157,7 @@ export function WishlistPage() {
         itemCount={activeCount}
         title={wishlist?.title ?? 'WishList'}
         subtitle={canEdit ? 'Ваш вишлист' : 'Просмотр вишлиста'}
-        actions={slug ? <ShareButton slug={slug} /> : undefined}
+        actions={slug ? <ShareButton slug={slug} editToken={shareEditToken} /> : undefined}
       />
 
       <main>
