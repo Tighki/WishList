@@ -2,16 +2,26 @@ import { ArrowRight, Gift, Loader2, Plus, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { SiteHeader } from '@/components/SiteHeader'
+import { WishlistTitleEditor } from '@/components/WishlistTitleEditor'
 import { useAuth } from '@/context/AuthContext'
 import { ApiError, wishlistApi } from '@/lib/api'
 import { saveEditToken } from '@/lib/edit-token'
-import { cn } from '@/lib/utils'
-import type { Wishlist } from '@/types/wishlist'
+import { cn, formatPrice } from '@/lib/utils'
+import type { WishlistSummary } from '@/types/wishlist'
+
+function formatItemCount(count: number): string {
+  const mod10 = count % 10
+  const mod100 = count % 100
+  if (mod100 >= 11 && mod100 <= 14) return `${count} товаров`
+  if (mod10 === 1) return `${count} товар`
+  if (mod10 >= 2 && mod10 <= 4) return `${count} товара`
+  return `${count} товаров`
+}
 
 export function MyWishlistsPage() {
   const navigate = useNavigate()
   const { user, isLoading: isAuthLoading } = useAuth()
-  const [wishlists, setWishlists] = useState<Wishlist[]>([])
+  const [wishlists, setWishlists] = useState<WishlistSummary[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -48,6 +58,15 @@ export function MyWishlistsPage() {
     } finally {
       setIsCreating(false)
     }
+  }
+
+  async function handleRename(slug: string, title: string) {
+    const updated = await wishlistApi.updateWishlist(slug, { title })
+    setWishlists((prev) =>
+      prev.map((wishlist) =>
+        wishlist.slug === slug ? { ...wishlist, title: updated.title } : wishlist,
+      ),
+    )
   }
 
   if (isAuthLoading || (!user && isLoading)) {
@@ -127,22 +146,35 @@ export function MyWishlistsPage() {
         ) : (
           <div className="mt-8 space-y-3">
             {wishlists.map((wishlist) => (
-              <Link
+              <div
                 key={wishlist.id}
-                to={`/w/${wishlist.slug}`}
                 className={cn(
                   'group flex items-center justify-between gap-4 rounded-3xl border border-stone/10',
                   'bg-white px-5 py-4 shadow-sm transition hover:border-terracotta/20 hover:shadow-md',
                 )}
               >
-                <div className="min-w-0">
-                  <p className="truncate text-lg font-medium text-charcoal">{wishlist.title}</p>
-                  <p className="mt-1 text-sm text-stone">
-                    Создан {new Date(wishlist.createdAt).toLocaleDateString('ru-RU')}
-                  </p>
+                <div className="min-w-0 flex-1">
+                  <WishlistTitleEditor
+                    title={wishlist.title}
+                    titleClassName="text-lg"
+                    onSave={(title) => handleRename(wishlist.slug, title)}
+                  />
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-stone">
+                    <span>{formatItemCount(wishlist.itemCount)}</span>
+                    <span className="text-stone/40">·</span>
+                    <span className="font-medium text-charcoal">{formatPrice(wishlist.total)}</span>
+                    <span className="text-stone/40">·</span>
+                    <span>Создан {new Date(wishlist.createdAt).toLocaleDateString('ru-RU')}</span>
+                  </div>
                 </div>
-                <ArrowRight className="size-5 shrink-0 text-stone transition group-hover:text-terracotta" />
-              </Link>
+                <Link
+                  to={`/w/${wishlist.slug}`}
+                  className="shrink-0 rounded-xl p-2 text-stone transition hover:bg-sand/60 hover:text-terracotta"
+                  aria-label="Открыть вишлист"
+                >
+                  <ArrowRight className="size-5" />
+                </Link>
+              </div>
             ))}
           </div>
         )}

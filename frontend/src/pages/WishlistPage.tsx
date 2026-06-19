@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { Header } from '@/components/Header'
 import { ProductCard } from '@/components/ProductCard'
 import { ShareButton } from '@/components/ShareButton'
+import { WishlistTitleEditor } from '@/components/WishlistTitleEditor'
 import { ApiError, wishlistApi } from '@/lib/api'
 import { getEditToken } from '@/lib/edit-token'
 import type { CreateItemPayload, Wishlist, WishlistItem } from '@/types/wishlist'
@@ -140,6 +141,22 @@ export function WishlistPage() {
         total={total}
         itemCount={activeCount}
         title={wishlist?.title ?? 'WishList'}
+        titleSlot={
+          canEdit && wishlist && slug ? (
+            <WishlistTitleEditor
+              title={wishlist.title}
+              titleClassName="text-lg font-semibold sm:text-xl"
+              onSave={async (title) => {
+                const updated = await wishlistApi.updateWishlist(
+                  slug,
+                  { title },
+                  editToken ?? undefined,
+                )
+                setWishlist(updated)
+              }}
+            />
+          ) : undefined
+        }
         subtitle={canEdit ? 'Ваш вишлист' : 'Просмотр вишлиста'}
         actions={slug ? <ShareButton slug={slug} /> : undefined}
       />

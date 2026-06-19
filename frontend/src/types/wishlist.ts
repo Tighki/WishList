@@ -5,6 +5,11 @@ export interface Wishlist {
   createdAt: string
 }
 
+export interface WishlistSummary extends Wishlist {
+  itemCount: number
+  total: number
+}
+
 export interface WishlistItem {
   id: string
   title: string

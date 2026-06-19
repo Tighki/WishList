@@ -1,4 +1,4 @@
-import type { CreateItemPayload, Wishlist, WishlistItem } from '@/types/wishlist'
+import type { CreateItemPayload, Wishlist, WishlistItem, WishlistSummary } from '@/types/wishlist'
 import type { User } from '@/types/user'
 import { getAuthToken } from '@/lib/auth'
 
@@ -23,6 +23,11 @@ interface ApiWishlist {
   createdAt: string
 }
 
+interface ApiWishlistSummary extends ApiWishlist {
+  itemCount: number
+  total: number
+}
+
 interface ApiUser {
   id: string
   email: string
@@ -44,6 +49,17 @@ class ApiError extends Error {
     this.name = 'ApiError'
     this.status = status
     this.code = code
+  }
+}
+
+function mapWishlistSummary(wishlist: ApiWishlistSummary): WishlistSummary {
+  return {
+    id: wishlist.id,
+    slug: wishlist.slug,
+    title: wishlist.title,
+    createdAt: wishlist.createdAt,
+    itemCount: wishlist.itemCount,
+    total: wishlist.total,
   }
 }
 
@@ -172,9 +188,22 @@ export const wishlistApi = {
     }
   },
 
-  async getMyWishlists(): Promise<Wishlist[]> {
-    const data = await request<{ wishlists: ApiWishlist[] }>('/wishlists/mine')
-    return data.wishlists.map(mapWishlist)
+  async getMyWishlists(): Promise<WishlistSummary[]> {
+    const data = await request<{ wishlists: ApiWishlistSummary[] }>('/wishlists/mine')
+    return data.wishlists.map(mapWishlistSummary)
+  },
+
+  async updateWishlist(
+    slug: string,
+    patch: { title: string },
+    editToken?: string,
+  ): Promise<Wishlist> {
+    const data = await request<{ wishlist: ApiWishlist }>(`/wishlists/${slug}`, {
+      method: 'PATCH',
+      editToken,
+      body: JSON.stringify(patch),
+    })
+    return mapWishlist(data.wishlist)
   },
 
   async getWishlist(
