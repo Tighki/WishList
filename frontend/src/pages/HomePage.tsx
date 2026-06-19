@@ -1,12 +1,15 @@
 import { Gift, Loader2, Sparkles } from 'lucide-react'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { SiteHeader } from '@/components/SiteHeader'
+import { useAuth } from '@/context/AuthContext'
 import { ApiError, wishlistApi } from '@/lib/api'
 import { saveEditToken } from '@/lib/edit-token'
 import { cn } from '@/lib/utils'
 
 export function HomePage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [title, setTitle] = useState('Мой вишлист')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -31,7 +34,9 @@ export function HomePage() {
 
   return (
     <div className="min-h-svh bg-cream">
-      <main className="mx-auto flex min-h-svh max-w-3xl flex-col justify-center px-4 py-16 sm:px-6">
+      <SiteHeader />
+
+      <main className="mx-auto flex max-w-3xl flex-col justify-center px-4 py-16 sm:px-6">
         <div className="text-center">
           <div className="mx-auto flex size-16 items-center justify-center rounded-3xl bg-terracotta/10 text-terracotta">
             <Gift className="size-8" />
@@ -43,6 +48,21 @@ export function HomePage() {
             Создайте список желаний, добавляйте товары вручную и отправьте ссылку
             близким — они увидят ваш вишлист без регистрации
           </p>
+          {user ? (
+            <Link
+              to="/me"
+              className="mt-4 inline-flex text-sm font-medium text-terracotta hover:text-terracotta-dark"
+            >
+              Перейти к моим вишлистам →
+            </Link>
+          ) : (
+            <p className="mt-4 text-sm text-stone">
+              <Link to="/login" className="font-medium text-terracotta hover:text-terracotta-dark">
+                Войдите
+              </Link>
+              , чтобы сохранять все списки в личном кабинете
+            </p>
+          )}
         </div>
 
         <div className="mt-10 rounded-3xl border border-stone/10 bg-white p-6 shadow-sm sm:p-8">

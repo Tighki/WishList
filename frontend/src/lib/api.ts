@@ -1,4 +1,6 @@
 import type { CreateItemPayload, Wishlist, WishlistItem } from '@/types/wishlist'
+import type { User } from '@/types/user'
+import { getAuthToken } from '@/lib/auth'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '/api'
 
@@ -21,6 +23,13 @@ interface ApiWishlist {
   createdAt: string
 }
 
+interface ApiUser {
+  id: string
+  email: string
+  name: string
+  createdAt: string
+}
+
 interface ApiErrorBody {
   error?: string
   code?: string
@@ -35,6 +44,15 @@ class ApiError extends Error {
     this.name = 'ApiError'
     this.status = status
     this.code = code
+  }
+}
+
+function mapUser(user: ApiUser): User {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    createdAt: user.createdAt,
   }
 }
 
@@ -60,12 +78,32 @@ function mapWishlist(wishlist: ApiWishlist): Wishlist {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+type RequestOptions = RequestInit & {
+  auth?: boolean
+  editToken?: string
+}
+
+async function request<T>(path: string, init?: RequestOptions): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  if (init?.auth !== false) {
+    const token = getAuthToken()
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+  }
+
+  if (init?.editToken) {
+    headers['X-Edit-Token'] = init.editToken
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
+      ...headers,
+      ...(init?.headers as Record<string, string> | undefined),
     },
   })
 
@@ -90,9 +128,36 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
-function withEditToken(editToken?: string): HeadersInit | undefined {
-  if (!editToken) return undefined
-  return { 'X-Edit-Token': editToken }
+export const authApi = {
+  async register(input: {
+    email: string
+    password: string
+    name?: string
+  }): Promise<{ user: User; accessToken: string }> {
+    const data = await request<{ user: ApiUser; accessToken: string }>('/auth/register', {
+      method: 'POST',
+      auth: false,
+      body: JSON.stringify(input),
+    })
+    return { user: mapUser(data.user), accessToken: data.accessToken }
+  },
+
+  async login(input: {
+    email: string
+    password: string
+  }): Promise<{ user: User; accessToken: string }> {
+    const data = await request<{ user: ApiUser; accessToken: string }>('/auth/login', {
+      method: 'POST',
+      auth: false,
+      body: JSON.stringify(input),
+    })
+    return { user: mapUser(data.user), accessToken: data.accessToken }
+  },
+
+  async me(): Promise<User> {
+    const data = await request<{ user: ApiUser }>('/auth/me')
+    return mapUser(data.user)
+  },
 }
 
 export const wishlistApi = {
@@ -107,22 +172,37 @@ export const wishlistApi = {
     }
   },
 
-  async getWishlist(slug: string): Promise<{ wishlist: Wishlist; items: WishlistItem[] }> {
-    const data = await request<{ wishlist: ApiWishlist; items: ApiItem[] }>(`/wishlists/${slug}`)
+  async getMyWishlists(): Promise<Wishlist[]> {
+    const data = await request<{ wishlists: ApiWishlist[] }>('/wishlists/mine')
+    return data.wishlists.map(mapWishlist)
+  },
+
+  async getWishlist(
+    slug: string,
+    editToken?: string,
+  ): Promise<{ wishlist: Wishlist; items: WishlistItem[]; canEdit: boolean }> {
+    const data = await request<{
+      wishlist: ApiWishlist
+      items: ApiItem[]
+      canEdit?: boolean
+    }>(`/wishlists/${slug}`, {
+      editToken,
+    })
     return {
       wishlist: mapWishlist(data.wishlist),
       items: data.items.map(mapItem),
+      canEdit: Boolean(data.canEdit),
     }
   },
 
   async addItem(
     slug: string,
     payload: CreateItemPayload,
-    editToken: string,
+    editToken?: string,
   ): Promise<WishlistItem> {
     const data = await request<{ item: ApiItem }>(`/wishlists/${slug}/items`, {
       method: 'POST',
-      headers: withEditToken(editToken),
+      editToken,
       body: JSON.stringify(payload),
     })
     return mapItem(data.item)
@@ -132,20 +212,20 @@ export const wishlistApi = {
     slug: string,
     id: string,
     patch: { quantity?: number; purchased?: boolean },
-    editToken: string,
+    editToken?: string,
   ): Promise<WishlistItem> {
     const data = await request<{ item: ApiItem }>(`/wishlists/${slug}/items/${id}`, {
       method: 'PATCH',
-      headers: withEditToken(editToken),
+      editToken,
       body: JSON.stringify(patch),
     })
     return mapItem(data.item)
   },
 
-  async removeItem(slug: string, id: string, editToken: string): Promise<void> {
+  async removeItem(slug: string, id: string, editToken?: string): Promise<void> {
     await request<void>(`/wishlists/${slug}/items/${id}`, {
       method: 'DELETE',
-      headers: withEditToken(editToken),
+      editToken,
     })
   },
 }

@@ -17,9 +17,9 @@ export function WishlistPage() {
   const [isBootstrapping, setIsBootstrapping] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [canEdit, setCanEdit] = useState(false)
 
   const editToken = slug ? getEditToken(slug) : null
-  const canEdit = Boolean(editToken)
 
   const total = useMemo(
     () =>
@@ -41,10 +41,11 @@ export function WishlistPage() {
     if (!slug) return
 
     wishlistApi
-      .getWishlist(slug)
+      .getWishlist(slug, editToken ?? undefined)
       .then((data) => {
         setWishlist(data.wishlist)
         setItems(data.items)
+        setCanEdit(data.canEdit || Boolean(editToken))
       })
       .catch((err) => {
         if (err instanceof ApiError && err.status === 404) {
@@ -54,15 +55,15 @@ export function WishlistPage() {
         setError('Не удалось загрузить вишлист. Запущен ли backend?')
       })
       .finally(() => setIsBootstrapping(false))
-  }, [slug])
+  }, [slug, editToken])
 
   async function handleAdd(payload: CreateItemPayload) {
-    if (!slug || !editToken) return
+    if (!slug || !canEdit) return
 
     setIsLoading(true)
     setError(null)
     try {
-      const item = await wishlistApi.addItem(slug, payload, editToken)
+      const item = await wishlistApi.addItem(slug, payload, editToken ?? undefined)
       setItems((prev) => [item, ...prev])
     } catch (err) {
       const message =
@@ -74,11 +75,11 @@ export function WishlistPage() {
   }
 
   async function handleRemove(id: string) {
-    if (!slug || !editToken) return
+    if (!slug || !canEdit) return
 
     setError(null)
     try {
-      await wishlistApi.removeItem(slug, id, editToken)
+      await wishlistApi.removeItem(slug, id, editToken ?? undefined)
       setItems((prev) => prev.filter((item) => item.id !== id))
     } catch (err) {
       const message =
@@ -88,7 +89,7 @@ export function WishlistPage() {
   }
 
   async function handleQuantityChange(id: string, quantity: number) {
-    if (!slug || !editToken) return
+    if (!slug || !canEdit) return
 
     setError(null)
     const previous = items
@@ -97,7 +98,12 @@ export function WishlistPage() {
     )
 
     try {
-      const updated = await wishlistApi.updateItem(slug, id, { quantity }, editToken)
+      const updated = await wishlistApi.updateItem(
+        slug,
+        id,
+        { quantity },
+        editToken ?? undefined,
+      )
       setItems((prev) => prev.map((item) => (item.id === id ? updated : item)))
     } catch (err) {
       setItems(previous)
